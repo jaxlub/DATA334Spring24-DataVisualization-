@@ -1,0 +1,44 @@
+---
+title: "Intro"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+What is your name and what is your class year (first-year, sophomore, junior, senior)?
+Jax Lubkowitz Senior
+
+What is/are your major(s) and minor(s), either actual or intended?
+Biology and Computer Science
+
+Why did you decide to take this course?
+I like R and Coding and Data Vis is important in all fields. 
+
+In what semester and year did you take STAT/DATA 234? STAT 213?
+Last semester
+
+Have you taken CS 140?
+yes
+
+Have you used Git before? If so, in what context?
+Yes, worked with it in my class on both github and gitlab on projects with over 20 collaboraters.
+
+Before this course, did you use R Studio on your desktop?
+Yes
+
+What is your hometown: city, state, country?
+Huntington Vermont USA
+
+Do you play a sport on campus? If so, what sport? If not, what is an activity that you do on or off-campus?
+Nordic Skiing
+
+What is your favorite TV show or movie or band/musical artist?
+Peaky Blinders or the Office
+Favorite artist - Pop Smoke
+
+Tell me something about yourself.
+I love candy, any and all forms but especially sour gummies like sour patch kids. 
+
+What are your expectations for this class and/or what do you hope to gain from this class?
+I hope to develop a deeper understanding of how to best convey data and also work with some of R's more complex packages and features. 

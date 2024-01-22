@@ -1,0 +1,118 @@
+---
+title: "Section 2"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+# Intro
+1.) It is important to look at Data Visuals in addition to statisitcs as the whole picture is not always clear. For example in Anscombe’s quartet there are 4 datasets of the same number of data points with similar means and coefficients. And yet for all of there similarities there graphs are all remarkable different with varying spreads and shapes and this is way visualization is so important. 
+
+2.) The angle of the charts makes it hard to compare them and doesn't show their true size. There is also a lot of extra visual effects that overall just distract from the data such as the shadowing. 
+
+3.) Increasing the data-to-ink ratio can cause a reduction in the impact of the visual and cause it to be less memorable then other visuals. Also while trying to maximize this ratio the graphs can inadvertently be made more confusing. 
+
+4.) This statement refers to the need for a common base for each column as it is nearly impossible to compare each color as they all start at different heights. In the visual only the purple colors are comparable as they all start on the x axis where as the rest start at differing heights and thus can mislead the relative size of each color. 
+
+5.) I think one of the major takeaways from this chapter is it is important to build visuals in a way that conveys the information but does not simplify it to the point of data-loss or non-memorable but also not complex or extra that data is confusing or miss-representing. I think another important take away from this chapter is that appealing visuals and good data visuals are not the same thing. While it may be more aethestic to have a graph with a cool picture it takes away from the quality of the visual and its ability to convey information. 
+
+6.) On the one hand we are learning how to portray data in a accurate, truthful and clear way but it seems like there are many jobs that would ask how can we apply these skills to our visuals to mislead or make it look like one thing or another for an alterior benefit. How much of data visualization is ethics?
+
+# Basics
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+theme_set(theme_minimal())
+penguins
+
+ggplot(data = penguins, aes(x = bill_length_mm)) +
+  geom_freqpoly()
+
+ggplot(data = penguins, aes(x = bill_length_mm)) +
+  geom_histogram(colour = "black", fill = "white", bins = 15) +
+  facet_wrap(~ species)
+```
+
+stat
+```{r}
+ggplot(data = penguins, aes(x = species)) +
+  geom_bar(stat = "count") ## don't need stat = "count" because it's the default.
+
+pen2 <- penguins |> group_by(species) |> summarise(count = n())
+ggplot(data = pen2, aes(x = species, y = count)) +
+  geom_bar(stat = "identity")
+
+ggplot(data = pen2, aes(x = species, y = count)) +
+  geom_col()
+```
+
+position
+```{r}
+ggplot(data = penguins, aes(x = species, fill = sex)) +
+  geom_bar(position = "stack") + ## don't need "stack" because it's default
+  scale_fill_viridis_d()
+
+
+
+pen_na <- penguins |> filter(!is.na(sex))
+  
+# or like this
+penguins |> na.omit()
+
+# some wider then others due to NA values in dataset
+ggplot(data = pen_na, aes(x = species, fill = sex)) +
+  geom_bar(position = "dodge") + 
+  scale_fill_viridis_d()
+```
+
+coordinate function
+```{r}
+ggplot(data = penguins, aes(x = species)) +
+  geom_bar() +
+  coord_polar()
+
+ggplot(data = penguins, aes(x = species)) + 
+  geom_bar() +
+  coord_flip() 
+```
+
+
+```{r}
+ggplot(data = penguins, aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(stat = "identity", position = "identity") +
+  coord_cartesian() +
+  facet_null()
+
+ggplot(data = penguins, aes(x = bill_length_mm)) +
+  geom_histogram()
+
+ggplot(data = penguins, aes(x = sex, y = bill_depth_mm)) +
+  geom_boxplot()
+
+ggplot(data = penguins, aes(x = bill_length_mm)) +
+  geom_freqpoly(color = "blue") 
+ggplot(data = penguins, aes(x = bill_length_mm, color = species)) +
+  geom_freqpoly() 
+
+ggplot(data = penguins, aes(x = bill_length_mm, y = bill_depth_mm )) +
+  geom_point(aes(color = species)) +
+  geom_smooth() 
+
+ggplot(data = penguins, aes(x = bill_length_mm, y = bill_depth_mm )) +
+  geom_point() +
+  geom_smooth(aes(color = species))
+
+ggplot(data = penguins, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_point(stat = "identity", position = "identity") +
+  coord_cartesian() +
+  facet_wrap(~ species)
+
+ggplot(data = penguins, aes(x = bill_length_mm, y = body_mass_g)) +
+  geom_point(stat = "identity", position = "identity") +
+  coord_polar() +
+  facet_wrap(~ species)
+```
+
+# Git Setup in R
+
+
