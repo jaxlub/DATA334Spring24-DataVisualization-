@@ -1,0 +1,381 @@
+---
+title: "Section11"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+# 11.1 Outliers and Area Plots
+```{r}
+library(MASS)
+library(tidyverse)
+theme_set(theme_minimal())
+
+ggplot(data = mammals, aes(x = body, y = brain)) +
+  geom_point()
+```
+
+```{r}
+ggplot(data = mammals |> filter(body <= 600), aes(x = body, y = brain)) +
+  geom_point() +
+  labs(caption = "Two species of elephant in the data were removed before constructing this plot.",
+       title = "Option 1")
+```
+
+```{r}
+library(ggbreak)
+ggplot(data = mammals, aes(x = body, y = brain)) +
+  geom_point() +
+  scale_x_break(breaks = c(750, 2500, 2700, 6400)) +
+  labs(title = "Option 2")
+```
+
+```{r}
+library(MASS)
+ggplot(data = mammals, aes(x = body, y = brain)) +
+  geom_point() +
+  scale_x_log10() +
+  scale_y_log10() +
+  labs(title = "Option 3")
+```
+
+```{r}
+library(scales) 
+ggplot(data = mammals, aes(x = body, y = brain)) +
+  geom_point() +
+    scale_y_continuous(trans = log_trans(), 
+                         breaks = trans_breaks("log", function(x) exp(x)),
+                         labels = trans_format("log", math_format(e ^ .x))) +
+    scale_x_continuous(trans = log_trans(), 
+                         breaks = trans_breaks("log", function(x) exp(x)),
+                         labels = trans_format("log", math_format(e ^ .x)))
+```
+
+```{r}
+library(babynames)
+baby_matt <- babynames |> filter(name == "Matthew" & sex == "M")
+ggplot(data = baby_matt, aes(x = year, y = n)) +
+  geom_line()
+```
+
+```{r}
+baby_friends <- babynames |> filter(name == "Monica" & sex == "F" |
+                                    name == "Phoebe" & sex == "F" |
+                                    name == "Rachel" & sex == "F" |
+                                    name == "Ross" & sex == "M" |
+                                    name == "Joseph" & sex == "M" |
+                                    name == "Chandler" & sex == "M")
+ggplot(data = baby_friends, aes(x = year, y = n)) +
+  geom_line(aes(colour = name)) +
+  scale_colour_brewer(palette = "Accent")
+```
+
+```{r}
+library(quantmod)
+library(lubridate)
+
+start <- ymd("2011-01-01")
+end <- ymd("2022-3-17")
+getSymbols(c("GME", "SPY"), src = "yahoo",
+           from = start, to = end)
+#> [1] "GME" "SPY"
+
+date_tib <- as_tibble(index(GME)) |>
+  rename(start_date = value)
+gme_tib <- as_tibble(GME)
+spy_tib <- as_tibble(SPY)
+all_stocks <- bind_cols(date_tib, gme_tib, spy_tib)
+
+stocks_long <- all_stocks |>
+  dplyr::select(start_date, GME.Adjusted, SPY.Adjusted) |>
+  pivot_longer(2:3, names_to = "Stock_Type", values_to = "Price") |>
+  mutate(Stock_Type = fct_recode(Stock_Type,
+                                 GameStop = "GME.Adjusted",
+                                 `S & P 500` = "SPY.Adjusted"
+                                 ))
+```
+
+```{r}
+stocks_gme <- stocks_long |> filter(Stock_Type == "GameStop")
+ggplot(data = stocks_gme, aes(x = start_date, y = Price)) +
+  geom_line() +
+  theme_minimal()
+```
+
+```{r}
+stocks_spy <- stocks_long |> filter(Stock_Type == "S & P 500")
+ggplot(data = stocks_spy, aes(x = start_date, y = Price)) +
+  geom_line() +
+  theme_minimal()
+
+
+ggplot(data = stocks_gme, aes(x = start_date, y = Price)) +
+  geom_line(colour = "blueviolet") +
+  geom_area(fill = "blueviolet", alpha = 0.3) +
+  theme_minimal()
+```
+
+## Exercise 1
+I think option 3 is the best. In option 1, you lose some data points and even with these removed many of the points are clustered and the relationship is unclear between the variables. In the second option the graph is just wonky and hard to interpret. In option 3 all data points are present the relationship between the variables in very clear. 
+
+## Exercise 2
+```{r}
+baby_matt <- babynames |> filter(name == "Matthew")
+ggplot(data = baby_matt, aes(x = year, y = n)) +
+  geom_line()
+```
+In this data set removing the gender filter results in 2 rows for some years when there are some male Mathews and female Matthews and thus when we plot by year there is to 2007s for example. This is what causes the static-y appearance as the line goes from the male Mathews of 2007 to the female Mathews of 2007 count to the males Mathews of 2008 and so on. If we wanted to still do a line plot we should add up the totals of both M and F for each year to avoid this double-year static appearance.  
+
+## Exercise 3
+```{r}
+ggplot(data = stocks_gme, aes(x = start_date, y = Price)) +
+  geom_line(colour = "blueviolet") +
+  geom_area(fill = "blueviolet", alpha = 0.3, position = "identity") +
+  theme_minimal() +
+  geom_line(data = stocks_spy, color = "green") +
+  geom_area(data = stocks_spy, fill = "green", alpha = .3, position = "identity")
+
+```
+
+
+
+# 11.2 - Visualizing large Data Sets
+```{r}
+library(tidyverse)
+diamonds |> nrow()
+ggplot(data = diamonds, aes(x = carat, y = price)) +
+  geom_point()
+
+# or ...
+ggplot(data = diamonds, aes(x = carat, y = price)) +
+  geom_hex() +
+  scale_fill_viridis_c() +
+  theme_minimal()
+# From this plot we can more easily see density of diamonds and see most are low carat and low price
+# but we can no longer use color as an aesthetic
+```
+
+```{r}
+n <- 10000000
+x <- rnorm(n, 0, 1)
+y <- x * rgamma(n, 3, 2)
+df <- tibble(x = x, y = y)
+
+## if you run this next line, R will probably crash!
+## ggplot(data = df, aes(x = x, y = y)) +
+##  geom_point()
+
+ggplot(data = df, aes(x = x, y = y)) +
+   geom_hex() +
+   scale_fill_viridis_c()
+```
+Or can take a sample of data
+```{r}
+df_small <- df |> slice_sample(n = 10000)
+ggplot(data = df_small, aes(x = x, y = y)) +
+  geom_point(alpha = 0.2) +
+  geom_smooth()
+
+# Cannot see extreme outliars unless randomly selected
+```
+
+# 11.2 - Visualizing Large Variable Data Sets
+
+```{r}
+library(openintro)
+mlb_small <- mlb_players_18 |> filter(games > 50 & position != "P") ## only look at players 
+## who play at least 50 games in the season and are not pitchers
+```
+
+```{r}
+library(GGally)
+ggpairs(data = mlb_small, columns = 6:11)
+```
+
+Look at correlations of variables
+This assumes linear relationship!
+```{r}
+ggcorr(data = mlb_small |> dplyr::select(4:ncol(mlb_small)))
+```
+
+# Exercise 1
+```{r}
+set.seed(1414111)
+x1 <- rnorm(100, 0, 1)
+x2 <- seq(-1, 1, length.out = 100)
+y <- 4 + 0 * x1 + 1 * x2^2 + rnorm(100, 0, 0.1)
+df <- tibble(x1 = x1, x2 = x2, y = y)
+ggcorr(data = df)
+
+# Does not appear that there is any relationship but this is because they are not linear-ly related. 
+```
+
+# Exercise 2
+```{r}
+ggplot(data = df, aes(x = x1, y = y)) +
+  geom_point()
+# no relationship
+
+ggplot(data = df, aes(x = x2, y = y)) +
+  geom_point()
+# def a relationship
+```
+
+correlation coef plot is only for linear relationships and thus does not show non-linear relationship
+
+
+Multi-co-linearity - when predictors are highly correlated with each other resulting in goofy slopes
+
+# Network Visualization
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+df <- read_excel(here::here("data/slu_graduates_17_23.xlsx"))
+
+## fixes error in the data
+df <- df |> mutate(across(everything(),
+                          .fns = ~replace(., . ==  "STATS" , "STAT")))
+
+majors_long <- df |> filter(!is.na(major3) | !is.na(major2)) |>
+  pivot_longer(c(major1, major2, major3),
+               names_to = "major_num",
+               values_to = "major") |>
+  filter(!is.na(major)) |>
+  dplyr::select(-minor1, -sex, -minor2, -minor3, -graduation_year)
+
+
+
+network_df <- majors_long |>
+  group_by(adm_id) |>
+  reframe(test = t(combn(major, 2))) |>
+  mutate(vertex1 = test[ ,1],
+         vertex2 = test[ ,2]) |>
+  dplyr::select(-test)
+network_df
+```
+triple majors make it harder then just double majors as it adds many new columns and requires 3 connections/combinations instead of 1. 
+
+`reframe()` - relaxes assumptions of `summarise()` that there should be only one row per group returned. 
+
+```{r}
+network_sum <- network_df |> mutate(major_first = if_else(vertex1 > vertex2,
+                                           true = vertex2,
+                                           false = vertex1),
+                     major_second = if_else(vertex1 > vertex2,
+                                            true = vertex1,
+                                            false = vertex2)) |>
+  dplyr::select(-vertex1, -vertex2) |>
+  group_by(major_first, major_second) |>
+  summarise(n_majors = n()) |>
+  filter(n_majors >= 5) ## only keep combos with 5 or more students
+```
+
+want to count up total double majors regardless of order written in so they are rearranged alphabetically (ie MATH PHYS = PHYS MATH majors).
+
+```{r}
+##install.packages("tidygraph")
+library(tidygraph)
+```
+1 edge df and 1 node df
+```{r}
+
+# Nodes are all present majors that someone has double or trip majored in
+# id must be called id
+nodes <- df |> filter(!is.na(major3) | !is.na(major2)) |>
+  pivot_longer(c(major1, major2, major3),
+               names_to = "major_num",
+               values_to = "major") |>
+  filter(!is.na(major)) |>
+  distinct(major) |> ## keep only one row for each unique major
+  rename(label = major) |>
+  ## only keep the majors that are found in network_sum
+  filter(label %in% c(network_sum |> pull(major_first),
+                      network_sum |> pull(major_second))) |>
+  rowid_to_column("id") |>
+  mutate(major_type = case_when(label == "MATH" ~ "MCSS",
+                        label == "STAT" ~ "MCSS",
+                        label == "CS" ~ "MCSS",
+                        label == "EC_MA" ~ "MCSS",
+                        label == "BIOL" ~ "Science",
+                        label == "PHYS" ~ "Science",
+                        label == "PSYC" ~ "Science",
+                        label == "ECON" ~ "Social Science",
+                        label == "EN_EC" ~ "Social Science",
+                        label == "EC_SP" ~ "Social Science",
+                        label == "SOC" ~ "Social Science",
+                        label == "ANTH" ~ "Social Science",
+                        label == "GOVT" ~ "Social Science",
+                        label == "BUSLA" ~ "Social Science",
+                        .default = "Arts and Humanities"
+                        ))
+```
+
+```{r}
+# edges are pulled from are sum and joined with nodes data using to and from with n value
+edges <- left_join(network_sum, nodes, by = join_by(major_first == label)) |>
+  rename(from = "id") |>
+  left_join(nodes, by = join_by(major_second == label)) |>
+  rename(to = "id") |>
+  ungroup() |>
+  dplyr::select(to, from, n_majors)
+```
+create obj for mapping
+```{r}
+network_obj <- tbl_graph(nodes = nodes, edges = edges, directed = FALSE)
+```
+
+```{r}
+#install.packages("ggraph")
+library(ggraph)
+
+ggraph(network_obj |> mutate(centrality = centrality_authority()),
+                            layout = "stress") +
+  geom_edge_link(aes(width = n_majors), alpha = 0.7, show.legend = FALSE) +
+  geom_node_point(aes(colour = label,
+                      size = centrality), show.legend = FALSE) +
+  scale_edge_width(range = c(0.5, 3)) +
+  geom_node_text(aes(label = label), repel = TRUE) 
+```
+
+Use color of points to orient viewer
+```{r}
+ggraph(network_obj |> mutate(centrality = centrality_authority()),
+                            layout = "stress") +
+  geom_edge_link(aes(width = n_majors), alpha = 0.7, show.legend = FALSE) +
+  geom_node_point(aes(color = major_type,
+                      size = centrality), show.legend = TRUE) +
+  scale_edge_width(range = c(0.5, 3)) +
+  geom_node_text(aes(label = label), repel = TRUE)+
+  scale_color_viridis_d() +
+  guides(size = "none")
+```
+[Cool Graphs and Helpful code](https://ggraph.data-imaginist.com/articles/Layouts.html#want-more)
+
+
+# Paired Data
+```{r}
+library(gapminder)
+gapminder_df <- gapminder |> filter(year == 2002 | year == 2007)
+
+# Flawed method -  cant see anything useful
+# plot assumes independence but is not
+ggplot(data = gapminder_df, aes(x = factor(year), y = lifeExp))+
+  geom_boxplot() 
+
+# or could look at differences
+df <- gapminder_df |> group_by(country) |> summarise(change = diff(lifeExp))
+# diff assumes all data is in same order (first-second)
+ggplot(data = df, aes(x = change)) +
+  geom_histogram()
+# lost actual life_exp values
+
+df2 <- gapminder_df |> group_by(country) |> mutate(change = diff(lifeExp)) |> mutate(increase = if_else(change > 0, true = TRUE, false = FALSE))
+
+ggplot(data = df2, aes(x = year, y = lifeExp, group = country, color = increase)) +
+  geom_line(alpha = .5)
+```
+
+
+

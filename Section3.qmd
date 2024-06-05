@@ -1,0 +1,67 @@
+---
+title: "Section 3"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+What is the difference between a colour's hue and a colour's intensity? Hue refers to which color determined by wavelength while intensity refers to how bright and strong the color is.
+
+Think of an example where you would want to use a sequential colour scale that's different from the one given in the text. Then, think of examples where you would use a diverging colour scale and an unordered colour scale. Sequential color scale is used to display variables with a range like a percent. For example a visual of each states avg BMI, each state could be colored on a scale where darker color is a higher BMI while lighter is lower BMI. An unorder color scale would be used in places where there are varying catagorical variables. For example for graphing cat lovers, dog lovers, and turtle lovers as two seperate lines it does not matter if each line on the graph is related or corresponds to the other lines.
+
+Some gestalt inferences take priority over others. Using Figure 1.21, give an example of a gestalt inference that takes priority over another one. In the misc shape example (sort of middle left side with 2 blue shapes), the similarity by color takes proirity over the similarity of the shapes and also the nearness of the circles to each other.
+
+"Bar charts are better than Pie charts for visualizing a single categorical variable." Explain how results shown in Figure 1.23 support this claim. It is much harder to compare areas in pie charts as the similar areas are much less distiguishable as compared to a bar shart where one is even slightly longer then the other is very clear. In addition the angles of pie chart make it harder to descern size.
+
+Suppose you have a scatterplot of height on the y-axis vs. weight on the x-axis for people born in Canada, Mexico, and the United States. You now want to explore whether the relationship is different for people born in the United States, people born in Canada, and people born in Mexico. Should you use different shapes to distinguish the three countries or should you use different colours? Explain using either Figure 1.24 or 1.25.
+
+Color is a more effective way to distinguish, as in 1.25 shape is ranked as the least effective way to distinguish these values and overall give a much less clear and more cluttered appearance.
+
+When might you use the left-side of Figure 1.27 to show the law school data? When might you use the right-side of Figure 1.27 to show the law school data? In the left side the drop of appears much more extreme and could be used to emphasize the decline while in the right it does not seem that extreme and could be used to show that while there was a large decline it was not a huge percent of law students.
+
+Summary: What are two takeaways from Sections 1.3-1.7? It is important to understand how some aspects of visualizations are more important then others and which are best to implement. For example common scales are much more helpful then 3d visuals.
+
+Another important aspect is understanding what kind of data your working with and how to implement it. For example for continius varaibles sequential scales and techniques for mapping ordered data while in categorical data one can use non-ordered color scales and mapping techniques.
+
+What is one question that you have about the reading? When building a visual is there a series of steps to follow to implement/maximize the gestalt inferences and create the best visuals?
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+penguins <- penguins |> mutate(species_island_sex = interaction(species, 
+                                                                island,
+                                                                sex))
+ggplot(data = penguins |>
+         filter(!is.na(sex)), aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(aes(colour = sex)) +
+  facet_grid(island ~ species) +
+  scale_colour_viridis_d() +
+  theme_minimal()
+
+ggplot(data = penguins |>
+         filter(!is.na(sex)), aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(aes(colour = sex, shape = species)) +
+  facet_wrap(vars(island)) +
+  scale_colour_viridis_d() +
+  theme_minimal()
+
+
+
+```
+
+
+
+
+scale_color_viridis_d() - coloring discreet variable
+scale_color_viridis_c() - coloring continuous variable
+scale_color_viridis_b() - coloring continuous variable in bins
+
+
+# Making Ugliest visual
+```{r}
+
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing, colour = Region)) +
+  geom_point()
+```
+

@@ -1,0 +1,78 @@
+---
+title: "TakeHomeQ3"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+Statement of Integrity: “All work presented is my own, and I have followed all rules for collaboration. If I used any AI on this assignment, I have clearly stated both (1) what my search prompt was and (2) what I used from the AI answer.””
+
+Jax Lubkowitz
+
+
+```{r}
+library(tidyverse)
+library(broom)
+lego_df <- read_csv(here::here("data/lego_sample.csv")) |> 
+  mutate(minifigures = if_else(is.na(minifigures),
+                               true = 0,
+                               false = minifigures))
+
+lego_df |> group_by(minifigures) |> summarise(n())
+
+# Question 1
+lego.lm <- lm( price ~ pieces + theme , data = lego_df)
+
+lego.lm |> tidy()
+```
+
+# Question 2
+As long as pieces is held constant every increase to themeFriends (ie 0 (not theme friends to 1 if theme is freinds) results in a price decrease of $10.90. This means that friends theme legos with the same pieces as a city set cost 10.90 less. 
+
+# Question 3
+```{r}
+lego.lm |> augment() |> filter(.cooksd >= 0.75)
+```
+There is no points with cook distances greater then .75 ie no influential points
+
+# Question 4
+```{r}
+lego.lm <- lm( price ~ pieces + theme + minifigures, data = lego_df)
+
+lego.lm |> tidy()
+```
+For every increase in minifigures by 1 increases the price of the lego by $3.73 as long as species, and peices remain constant. 
+
+# Question 5
+This interaction would allow for the increase of minifigures coeffecinent to be different between differing theme sets. What this effectivly means is that if say friends minifigures were more desired and thus increases set price more this could be seen compared to duplo theme which maybe nobody cares about the figures and thus doesnt impact their price as much. This would allow for no longer parralel slopes between themes and thus the effect of # of minifigures could vary in different themes.
+
+# Question 6
+NA
+
+# Question 7
+```{r}
+library(modelr)
+grid <- lego_df |>
+  data_grid(
+    pieces = seq_range(pieces, n = 15),
+    minifigures = seq_range(minifigures, n = 5),
+    theme = c("DUPLO®", "Friends", "City")
+  ) 
+
+aug_surv <- augment(lego.lm, newdata = grid,
+                    se_fit = TRUE)
+
+ggplot(data = lego_df, aes(x = pieces, y = price)) +
+  geom_point() +
+  geom_line(data = aug_surv, aes(x = pieces, y = .fitted, group = as.factor(minifigures), color = minifigures)) +
+  facet_grid(~ theme) + 
+  labs(x = "# of Lego Pieces", 
+       y = "Price of Set",
+       color = "# of Minifigures in Set",
+       title = "Predicting Lego Sets using theme, # of peices & # of minifigures",
+       subtitle = "Actual data in points, Models in lines")
+
+```
+
+
+

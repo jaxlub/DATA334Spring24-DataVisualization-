@@ -1,0 +1,168 @@
+---
+title: "Section6"
+author: "Jax Lubkowitz"
+format: html
+editor: visual
+---
+# Section 6.1
+```{r}
+library(maps)
+library(tidyverse)
+state_df <- ggplot2::map_data("state")
+```
+
+```{r}
+ggplot(data = state_df, mapping = aes(x = long, y = lat, group = group)) +
+  geom_polygon(colour = "black", fill = "white") +
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme_void()
+```
+
+```{r}
+library(usdata)
+```
+
+# Choropleth Map
+```{r}
+state_stats <- state_stats |> mutate(state = str_to_lower(state))
+state_full <- left_join(state_df, state_stats, by = c("region" = "state"))
+
+ggplot(data = state_full, aes(x = long, y = lat, group = group)) +
+  geom_polygon(colour = "black", aes(fill = poverty)) + # colored by coal variable
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme_void() +
+  scale_fill_viridis_b()
+```
+
+# Exercise 1
+In the textbook the example of the "best" graph not being a map uses opiate related deaths by state through 2000-2014. The downside of the map is it is much harder to see trends on a state-by-state basis over these 14 maps where as in a time-series format these trends are clear. Another example where this would be the case is avg income of each state over the years. This would require a map of avg income for each year. The coloring in these maps would not be useful to see trends through years especially if the changes are fairly small which would be easily view-able in a graph.
+
+
+# Exercise 2
+A map could be used to visualize both distribution of poverty and smokers within the US. As both of these variables have a range of values and discrepancies a map visual is very convenient to see all of the data at once as opposed to a table of every state with the poverty or smoker levels which would be hard to compare and a lot to process. On the other side motor theft and federal spending are variables that do not make sense to visualize with a map. Motor thefts are not common enough to create large discrepancies that can be seen in color differing resulting in a map of all the same color. In addition it does not make sense to make a map of the US and color by federal spending as the federal spending is above the state level and thus the same for all states in the US once again creating a uniformly colored map. 
+
+# Exercise 3
+```{r}
+percent_change <- state_full |> mutate(perc_change = (pop2010-pop2000)/pop2000)
+
+#percent_change |> arrange(desc(perc_change))
+
+# Nevada has the highest population growth between 2000 and 2010 
+ggplot(data = percent_change, aes(x = long, y = lat, group = group)) +
+  geom_polygon(colour = "black", aes(fill = perc_change)) + # colored by coal variable
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme_void() +
+  scale_fill_viridis_b()
+```
+
+# Exercise 4
+To address this we must first look at what we wish to show. Using a sequential color scale we can show which states have the highest growth rate as percents are continous values and it is clear that NV has the highest. However in our dataset we actually have some states which % change is negative. If it is our desire to emphasize which states are growing in population and which are not, a diverging color scale would be beneficial. Using the sequential color scale makes all decreasing populations the same color as those with a stable population (0% change). With this in mind if we look at our data set the populations that are shrinking are very close to 0% change and thus I think is ok for us to use a sequential scale and "lump" these in with the 0% states.
+```{r}
+ggplot(data = percent_change, aes(x = long, y = lat, group = group)) +
+  geom_polygon(colour = "black", aes(fill = perc_change)) + 
+  coord_map(projection = "albers", lat0 = 39, lat1 = 45) +
+  theme_void() +
+  scale_colour_brewer(type = "seq")
+```
+
+# Section 6.2 - Shape Files
+
+```{r}
+active <- read_csv("https://raw.githubusercontent.com/iramler/stlawu_covid/main/slc_towns_active_cases.csv", n_max = 34)
+tcases <- read_csv("https://raw.githubusercontent.com/iramler/stlawu_covid/main/slc_towns_total_cases.csv", n_max = 34)
+
+active_long <- active |> pivot_longer(5:ncol(active), names_to = "date",
+                                       values_to = "cases")
+## repeat for total cases
+tcases_long <- tcases |> pivot_longer(5:ncol(tcases), names_to = "date",
+                                       values_to = "cases")
+
+library(lubridate)
+covid_df <- left_join(tcases_long, active_long,
+                      by = c("date", "Order", "NAME")) |>
+  mutate(date = mdy(date)) |>
+  rename(total_cases = cases.x,
+         active_cases = cases.y) |>
+  mutate(total_cases = if_else(is.na(total_cases),
+                               true = 0, false = total_cases),
+         active_cases = if_else(is.na(active_cases),
+                                      true = 0, false = active_cases))
+  
+
+covid_SLC <- covid_df |> filter(NAME == "St. Lawrence County")
+covid_sub <- covid_df |> filter(NAME != "St. Lawrence County")
+```
+
+```{r}
+ggplot(data = covid_SLC, aes(x = date, y = active_cases)) +
+  geom_line()
+```
+
+A shapefile typically has an extension of .shp. It needs to be accompanied by three other “helper” files: a .dbf file, a prj file, and a shx file.
+
+```{r}
+ ##install.packages("sf")
+library(sf)
+shp <- read_sf("data/SLC_Civil_Boundaries_SHP/slc.shp") |>
+  st_transform(st_crs("+proj=longlat"))
+```
+
+```{r}
+ggplot(data = shp) +
+  geom_sf() +
+  theme_void()
+```
+
+```{r}
+full_df <- left_join(shp, covid_sub, by = "NAME") |>
+  filter(date == max(date)) ## only plot cases on the most recent date
+```
+
+```{r}
+ggplot(data = full_df) +
+  geom_sf(aes(fill = active_cases)) +
+  theme_void() +
+  scale_colour_brewer(type = "seq")
+```
+
+
+```{r}
+# Bins emphasizes which are higher while lumping all similar together
+# Binning loses some info but is simpler
+ggplot(data = full_df) +
+  geom_sf(aes(fill = active_cases)) +
+  theme_void() +
+  scale_fill_viridis_b()
+```
+
+
+```{r}
+ggplot(data = full_df) +
+  geom_sf(aes(fill = active_cases)) +
+  geom_sf_text(aes(label = active_cases), color = "white") +
+  theme_void() +
+  scale_colour_brewer(type = "seq")
+```
+
+
+```{r}
+library(tidyverse)
+library(here)
+hpi_df <- read_csv(here("data/hpi-tidy.csv"))
+```
+
+```{r}
+world_mp <- map_data("world") 
+hpi_df <- hpi_df |>  mutate(Country = fct_recode(Country,"USA" = "United States of America"))
+full_df <- left_join(world_mp,hpi_df, by = join_by(region == Country)) 
+
+ggplot(data = full_df, aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill =LifeExpectancy)) +
+  coord_map(projection = "mercator", xlim = c(-180,180))
+  scale_fill_viridis_b() +
+  theme_minimal()
+
+```
+  
+
+

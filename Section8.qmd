@@ -1,0 +1,192 @@
+---
+title: "Section8"
+author: "Jax Lubkowitz"
+format: html
+editor: visual
+---
+
+
+```{r}
+library(tidyverse)
+library(broom)
+library(here)
+theme_set(theme_minimal())
+
+coffee_df <- read_csv(here("data/coffee_ratings.csv"))
+coffee_mod <- lm(total_cup_points ~ species + aroma + flavor +
+                   sweetness + moisture,
+   data = coffee_df)
+
+summary(coffee_mod)
+summary(coffee_mod)$coefficients["moisture", 4]
+
+# tidy for grabbing individual stats
+tidy(coffee_mod) |> select(p.value)
+tidy(coffee_mod) |> filter(term == "aroma")
+
+# glance for summary stats
+glance(coffee_mod)
+
+# look at whole df with stats
+# good for filtering
+augment(coffee_mod)
+
+```
+the fitted values (.fitted), cook’s distance (.cooksd), .hat values for leverage, and residuals (.resid).
+```{r}
+augment_df <- augment(coffee_mod)
+augment_df |> filter(.cooksd > 1)
+```
+
+```{r}
+ggplot(data = coffee_df, aes(x = total_cup_points)) +
+  geom_histogram(bins = 15, fill = "white", colour = "black")
+```
+
+
+```{r}
+augment_df |> filter(.hat > 0.2)
+```
+
+Outliars
+```{r}
+augment_df |> filter(.std.resid > 3 | .std.resid < -3)
+```
+
+```{r}
+ggplot(data = augment_df |> filter(.fitted > 25),
+       aes(x = .fitted, y = .resid)) +
+  geom_point() 
+```
+
+# Exercise 1
+```{r}
+library(palmerpenguins)
+penguins.lm <- lm(body_mass_g ~ species + bill_length_mm, data = penguins)
+```
+
+# Exercise 2
+```{r}
+sum_stats <- tidy(penguins.lm)
+sum_stats
+```
+
+# Exercise 3
+```{r}
+mod_stats <- glance(penguins.lm)
+mod_stats
+```
+
+# Exercise 4
+```{r}
+aug_pen <- augment(penguins.lm)
+ggplot(data = aug_pen,
+       aes(x = .fitted, y = .resid)) +
+  geom_point() 
+```
+In this plot it appears to have 2 separate groups with a clear line between them (about at 4500). This violates the constant variance assumption which assumes that the residuals are uniform for all variables. This would be demonstrated in this graph as a random or pattern less distribution. As this is not the case this assumption is violated and indicates that species and bill length are not independent variables. 
+
+# Exercise 5
+```{r}
+aug_pen |> filter(.cooksd > .75)
+```
+There are not penguins in the data that have a cooks distance greater then .75 and thus no influential penguins in our data. 
+
+# In-Class
+```{r}
+library(tidyverse)
+library(here)
+
+statsurvey_df <- read_csv(here("data/stat113_survey.csv"))
+
+statsurvey_nomiss <- statsurvey_df |> filter(!is.na(GPA))
+statsurvey_nomiss <- statsurvey_nomiss |>
+  mutate(time_year = as.numeric(time_year)) |>
+  mutate(a_year = if_else(time_semester == "S",
+                          true = time_year - 1,
+                          false = time_year)) |>
+  filter(GPA <= 4.0) |>
+  mutate(a_year_fact = as.factor(a_year),
+         a_year = a_year + 2000)
+
+# Year as Quant
+stats.lm <- lm(GPA ~ a_year, data = statsurvey_nomiss)
+
+stats.lm |> tidy()
+
+stats.lm <- lm(GPA ~ a_year, data = statsurvey_nomiss)
+
+summary(stats.lm)
+glance(stats.lm)
+
+# Year as factor
+stats_fact.lm <- lm(GPA ~ a_year_fact, data = statsurvey_nomiss)
+
+stats_fact.lm |> tidy()
+
+glance(stats_fact.lm)
+summary(stats_fact.lm)
+
+# BIC lower is better
+```
+
+# Visualizing Models
+Step 1: fit model and check assumptions
+Linearity - Scatter plot - GPA vs. academic year
+Normality - Check Histogram of Residuals
+Constant Variance - Residual plot vs fitter values
+independence - Think about how data was collected
+```{r}
+model_df <- stats.lm |> augment()
+# Linear
+ggplot(statsurvey_nomiss, aes(x = a_year_fact, y = GPA)) +
+  geom_point()
+
+# Normal
+ggplot(data = model_df, aes(x = .resid)) +
+  geom_histogram(color = "darkblue", fill = "lightblue")
+
+# constant variance
+ggplot(data = model_df, aes(y = .resid, x = .fitted))+
+  geom_jitter()
+```
+
+Step 2: Construct grid of predictor values (use tibble() or data_grid() from modelr package)
+
+Step 3: Augment model and add CI or error
+```{r}
+grid <- tibble::tibble(a_year = 2005:2021)
+
+model_df <- augment(stats.lm, newdata = grid, se_fit = TRUE, interval = "confidence")
+# confidence = 95% Conf that mean GPA is between __ to __
+# prediction = 95% conf that one gpa in dataset is between __ to __
+
+```
+
+Step 4: Visualize! 
+```{r}
+ggplot(data = model_df, aes(x = a_year, y = .fitted)) +
+  #geom_jitter(data = statsurvey_nomiss, aes(y = GPA), alpha = .1, width = .2) +
+  geom_errorbar(aes( ymin = .lower, ymax = .upper), width = .5, color = "#E42B1C") +
+  geom_point() +
+  geom_line(alpha = .4) +
+  labs(caption = "Error bars are 95% CI for mean response")
+# Points look okay but there are so many reader may get distracted from trend in the mean.
+```
+
+# More than 1 predictor
+```{r}
+mod_parallel <- lm(total_cup_points ~ aroma + species, data = coffee_df)
+tidy(mod_parallel)
+```
+
+# Interaction
+```{r}
+lm(total_cup_points ~ aroma + species + aroma * species, data = coffee_df)
+```
+
+
+
+
+
+

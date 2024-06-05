@@ -1,0 +1,127 @@
+---
+title: "Section13"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+```{r}
+##install.packages("devtools")
+library(devtools)
+##devtools::install_github("li-wen-li/uszipcodes")
+library(uszipcodes)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+theme_set(theme_minimal())
+
+beers <- read_csv(here("data/breweries.csv"))
+raw_zip <- uszipcodes::get_zip(beers$address)
+beers$Zip <- as.integer(uszipcodes::clean_zip(raw_zip))
+zip_tab <- zip_table |> dplyr::select(Zip, Latitude, Longitude)
+beer_location <- inner_join(beers, zip_tab)
+
+content <- beer_location |>
+  mutate(popup = paste0('<a href =', beer_location$website, '>',
+                        beer_location$brewery_name, '</a>'))
+```
+
+```{r}
+library(leaflet)
+beer_map <- leaflet(beer_location) |>
+  setView(lng = -98.583, lat = 39.833, zoom = 4) |>
+  addTiles() |>
+  addProviderTiles(providers$Esri.WorldGrayCanvas) |>
+  addMarkers(lng = beer_location$Longitude, lat = beer_location$Latitude,
+             clusterOptions = markerClusterOptions(),
+             popup = content$popup)
+beer_map
+```
+
+# Exercise 1
+We used an inner join because we want to have only beers that have valid zip codes in our data frame so that when we put them on the map it is correct. What this does is remove lines from beers that do not have a zip code in zip_tab and removes all rows from zip_tab that don't correspond to a brewery zip code effectively only pairing up correct brewery zip codes (ie we can find the lat/long for them) with correct long/lat cords.
+
+# Exercise 2
+```{r}
+leaflet(beer_location) |> setView(lng = -98.583, lat = 39.833, zoom = 4)
+```
+
+SetView starts the initial position so when the map is first created where is the visual oriented. The user can then move around but the initial point is set with setView. This sets both position and zoom level.
+
+```{r}
+leaflet(beer_location) |> setView(lng = -98.583, lat = 39.833, zoom = 4) |> addTiles()
+```
+AddTiles adds a tile layer to the visual essentially what the user is looking at such as a map of the US. 
+
+```{r}
+leaflet(beer_location) |> setView(lng = -98.583, lat = 39.833, zoom = 4) |> addTiles() |> addProviderTiles(providers$Esri.WorldGrayCanvas) |> addMarkers(lng = beer_location$Longitude, lat = beer_location$Latitude)
+```
+Add Markers adds the data points onto the map. The setView sets where the visual looks and the addTiles sets what the visual is of and the add marker adds points onto the visual. 
+
+```{r}
+leaflet(beer_location) |> setView(lng = -98.583, lat = 39.833, zoom = 4) |> addTiles() |> addProviderTiles(providers$Esri.WorldGrayCanvas) |> addMarkers(lng = beer_location$Longitude, lat = beer_location$Latitude,clusterOptions = markerClusterOptions())
+```
+Adding this parameter groups the data points by rough regions filled with sub-clusters of individual points which helps clean up the map and is a much neater visual. The clusters are labeled with how many sub-points they have. 
+
+```{r}
+leaflet(beer_location) |> setView(lng = -98.583, lat = 39.833, zoom = 4) |> addTiles() |> addProviderTiles(providers$Esri.WorldGrayCanvas) |> addMarkers(lng = beer_location$Longitude, lat = beer_location$Latitude,clusterOptions = markerClusterOptions(),popup = content$popup)
+```
+Adding the popup allows clicking on the points and see the data such as name and website about the actual point. 
+
+
+# Plotly
+```{r}
+library(plotly)
+library(tidyverse)
+
+hpi_df <- read_csv(here::here("data/hpi-tidy.csv"))
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point() +
+  theme_minimal()
+```
+
+```{r}
+plot1 <- ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point() +
+  theme_minimal()
+
+ggplotly(plot1)
+
+```
+
+```{r}
+plot2 <- ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing,
+                                   label = Country,
+                                   label2 = Region)) +
+  geom_point() +
+  theme_minimal()
+ggplotly(plot2, tooltip = c("x", "label", "label2"))
+```
+
+```{r}
+library(palmerpenguins)
+data <- palmerpenguins::penguins
+plot<- ggplot(data = data, aes(x = species)) +
+  geom_bar()
+
+ggplotly(plot, tooltip = "x")
+```
+
+Removing plotly bits on some with hoverinfo
+```{r}
+plot_test <- ggplot(hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point() +
+  geom_smooth()
+
+
+ggplotly(plot_test) |>
+  style(hoverinfo = "none", traces = c(1, 2, 3)) ## remove hover info for all three traces
+
+ggplotly(plot_test) |>
+  style(hoverinfo = "none", traces = c(3)) ## remove hover info for se line
+```
+
+

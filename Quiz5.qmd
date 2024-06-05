@@ -1,0 +1,91 @@
+---
+title: "Quiz5"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+Statement of Integrity: “All work presented is my own, and I have followed all rules for collaboration. I have not used any AI for this assignment.”
+
+Jax Lubkowitz
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+library(plotly)
+library(shiny)
+```
+# Question 1. 
+```{r}
+peng_plot <- ggplot(data = penguins, aes(x = bill_depth_mm, y = bill_length_mm, sex = sex)) +
+  geom_point(aes(colour = species)) +
+  scale_colour_viridis_d(option = "B") +
+  theme_minimal()
+
+ggplotly(peng_plot, tooltip = c("sex"))
+```
+
+# Question 2
+```{r}
+
+islands <- penguins |> 
+  pull(island) |> 
+  levels()
+
+peng_spec <-  penguins |> pull(species) |> unique()
+
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("island", 
+                  label = "Select Island of Interest", 
+                  choices = islands),
+      selectInput("species", 
+                  label = "Select Species of Interest", 
+                  choices = NULL),
+      selectInput("yaxis", 
+                  label = "Select Y-axis of Interest", 
+                  choices = c("bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g")),
+      sliderInput("jitter", "Select Graph Jitter", min = 0, max = .25, value = 0)),
+  mainPanel(
+    plotOutput("strip_plot"),
+    dataTableOutput("peng_stats")
+  )))
+
+server <- function(input, output, session) {
+  observeEvent(input$island,{
+    spec_choices <- penguins |> 
+      filter(island == input$island) |>
+      mutate(species = factor(species)) |> 
+      pull(species) |> 
+      levels()
+    updateSelectInput(inputId = "species", choices = spec_choices)
+  })
+  
+  penguins_one_sp_island <- reactive({
+    penguins |> 
+      filter(island == input$island) |>
+      filter(species == input$species) |>
+      filter(!is.na(sex))
+  })
+  
+  output$strip_plot <- renderPlot({
+    ggplot(data = penguins_one_sp_island(), aes(x = sex, y = .data[[input$yaxis]])) +
+      geom_jitter(width = input$jitter) +
+      labs(title = glue::glue(input$island," ", input$species," Penguins")) + 
+      theme_minimal()
+  })
+  
+  output$peng_stats <- renderDataTable({
+    penguins_one_sp_island() |> group_by(sex) |>
+    summarise(mean = mean(.data[[input$yaxis]], na.rm = TRUE),
+            sd = sd(.data[[input$yaxis]], na.rm = TRUE)) 
+  })
+}
+
+shinyApp(ui, server)
+```
+
+

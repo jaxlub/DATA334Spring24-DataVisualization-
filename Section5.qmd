@@ -1,0 +1,180 @@
+---
+title: "Section5" author: "Jax Lubkowitz" format: html: embed-resources: true
+---
+
+# Review
+
+```{r}
+library(tidyverse)
+library(here)
+theme_set(theme_minimal())
+hpi_df <- read_csv(here("data/hpi-tidy.csv"))
+hpi_df
+```
+
+```{r}
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point()
+```
+
+```{r}
+hpi_us <- hpi_df |> filter(Country == "United States of America")
+hpi_us
+```
+
+```{r}
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point() +
+  geom_text(data = hpi_us, aes(label = Country)) ## specify
+```
+
+```{r}
+library(ggrepel)
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point() +
+  geom_text_repel(data = hpi_us, aes(label = Country)) +
+  geom_point(data = hpi_us, size = 3, shape = 1) ## create a second point that is an open circle (shape = 1) with a larger size (size = 3) to surround the United States point on the scatterplot
+```
+
+```{r}
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing)) +
+  geom_point() +
+  geom_text_repel(data = hpi_us, aes(label = Country)) +
+  geom_point(data = hpi_us, size = 3, shape = 1) +
+  labs(title = "Countries with a Higher Ecological Footprint Tend to Have Citizens with Higher Wellbeing", ## add title
+    subtitle = "Wellbeing is on a 1-10 scale", ## add subtitle (smaller text size than the title)
+    caption = "Data Source: http://happyplanetindex.org/countries", ## add caption to the bottom of the figure
+    x = "Ecological Footprint", ## change x axis label
+    y = "Wellbeing") ## change y axis label
+```
+
+# Exercise 1
+
+mutate() - Mutate is used to generate new columns, typically with different attributes or values. arrange() - Arrange is used sort how rows are ordered in dataframe. select() - Select is used to choose columns to keep in the new dataframe. slice() - Slice is used to keep only certain areas of the dataframe like the first 10 rows for example. filter() - filter is used to only keep rows with certain attributes or values in the dataframe group_by() - group_by allocates rows in dataframes by similar column in order to perform further calculations such as counts or averages. summarise() - Used to make calculations within datasets to get averages, counts, or other group statistics. \# Exercise 2
+
+```{r}
+hpi_df |> mutate(wb_fp = Wellbeing/Footprint) |> arrange(desc(wb_fp))
+```
+
+# Exercise 3
+
+```{r}
+hpi_df |> mutate(life = case_when(LifeExpectancy >= 80 ~ "80's",
+                                  (LifeExpectancy >= 70 & LifeExpectancy < 80) ~ "70's",
+                                  LifeExpectancy < 70 ~ "Below 70"))
+```
+
+# Exercise 4
+
+```{r}
+hpi_df |> arrange(desc(LifeExpectancy))
+```
+
+# Exercise 5
+
+```{r}
+hpi_df |> select(Country, LifeExpectancy)
+```
+
+# Exercise 6
+
+```{r}
+hpi_df |> slice(1:5)
+```
+
+# Exercise 7
+
+```{r}
+hpi_df |> filter(Region == "Western World")
+```
+
+# Exercise 8
+
+```{r}
+hpi_df |> filter(LifeExpectancy < 55)
+```
+
+# Exercise 9
+
+```{r}
+hpi_df |> group_by(Region) |> summarise(total = n())
+```
+
+# Exercise 10
+
+```{r}
+hpi_df |> group_by(Region) |> summarise(Lowest_life = min(LifeExpectancy))
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+df <- read_excel(here::here("data/slu_graduates_17_23.xlsx"))
+## fixes error in the data
+df <- df |> mutate(across(everything(),
+                          .fns = ~replace(., . ==  "STATS" , "STAT")))
+```
+
+# Class notes
+
+```{r}
+graph <- df |>
+  select(-starts_with("minor")) |>
+  pivot_longer(starts_with("major"), names_to = "major_num", values_to = "major") |>
+  na.omit(major) |>
+  group_by(major, sex) |>
+  summarise(n_majors = n()) |>
+  ungroup() |>
+  pivot_wider(names_from = sex, values_from = n_majors, values_fill = 0) |>
+  mutate(prop = M /(`F`+ M)) |>
+  filter(`F` + M >= 70) |>
+  mutate(major = fct_reorder(major, prop)) |>
+  mutate(MSTCS = if_else(major == "MATH" | major == "STAT" | major == "CS", TRUE, FALSE))
+
+mcss_df <- graph |> filter(major %in% c("MATH","STAT", "CS"))
+
+
+ggplot(data = graph, aes(x = major, y = prop, color = MSTCS)) +
+  geom_segment(aes(xend = major, y = 0, yend = prop)) +
+  geom_point() +
+  coord_flip() +
+  theme_dark() +
+  #geom_segment(data = mcss_df, aes(xend = major, y = 0, yend = prop), color = "red") +
+  #geom_point(data = data = mcss_df, color = red, size = 4)
+  labs(y = "proportion of major Male", caption = "Data Source: SLU Institutional Resource Office") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15))
+```
+
+
+
+```{r}
+plot <- ggplot(data = graph, aes(x = major, y = prop, color = MSTCS, label_M = M, label_F = `F`)) +
+  geom_segment(aes(xend = major, y = 0, yend = prop)) +
+  geom_point() +
+  coord_flip() +
+  theme_dark() +
+  #geom_segment(data = mcss_df, aes(xend = major, y = 0, yend = prop), color = "red") +
+  #geom_point(data = data = mcss_df, color = red, size = 4)
+  labs(y = "proportion of major Male", caption = "Data Source: SLU Institutional Resource Office") +
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 15))
+
+ggplotly(plot, tooltip = c("x", "label_M", "label_F"))
+```
+
+
+
+
+
+# Make a terrible graph :)
+
+```{r}
+ggplot(data = hpi_df, aes(x = Footprint, y = Wellbeing, colour = Region)) +
+  geom_point() +
+  theme(plot.background = element_rect(fill = "yellow"), 
+        axis.text = element_text(size = 20, family = "courier", color = "green"),
+        axis.line = element_line(arrow = arrow()),
+        panel.grid = element_blank()) # get ride of gridlines
+```

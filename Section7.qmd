@@ -1,0 +1,101 @@
+---
+title: "Section7"
+author: "Jax Lubkowitz"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+theme_set(theme_minimal())
+
+library(here)
+pokemon_df <- read_csv(here("data/pokemon_full.csv"))
+pokemon_height <- pokemon_df |> 
+  filter(Type %in% c("Bug", "Electric", "Fighting", "Flying",
+                     "Grass", "Steel")) |>
+  group_by(Type) |>
+  summarise(avg_height = mean(height)) |>
+  mutate(Type = fct_reorder(Type, avg_height))
+
+ggplot(data = pokemon_height, aes(x = Type, y = avg_height)) +
+  geom_col() +
+  coord_flip()
+```
+
+# Exercise 1
+In this graphic we cannot see the distribution of the heights as we can not see any individual points. From this graphic we dont know if steel are generally taller or maybe they all have a height of 1 and there is one indivudal with a height of 1000 that makes the mean the highest. We cannot see standard deviation, quartiles, outliers or anything about individual data points. 
+
+# Exercise 2
+```{r}
+ggplot(data = pokemon_df, aes(x = Type, y = height)) +
+  geom_jitter(width = .25) +
+  coord_flip()
+# or...
+ggplot(data = pokemon_df, aes(x = Type, y = height)) +
+  geom_boxplot() +
+  coord_flip()
+```
+
+
+# Exercise 3
+```{r}
+## install.packages("openintro")
+library(openintro)
+data(mlb_players_18)
+ggplot(data = mlb_players_18, aes(x = position, y = HR)) +
+  geom_boxplot() +
+  coord_flip()
+```
+
+# Exercise 4
+Option 2 is much better as the differing levels can be seen and the variability in storm path is depicted as a wider area of it potentially passing through. In option 1 there is so many predicted pathways that it all becomes a jumbled mess and not much is clear. Option 2 shows clearly where the storm will go and shows the variation via a wider area of landfall. 
+
+# Exercise 5
+What is not conveyed by saying "we predict Biden has a 89% chance of winning" is how each win and model unfolds. For example Biden winning every state 89/100 is very different then Biden winning by only 1 swing-state 89 times out of a 100. The visuals show the different ways (aka variation) in the models and show potential futures that could unfold. Without these visuals we do not know how close or what voting patterns led to the prediction. 
+
+
+# Section 7.2
+```{r}
+library(tidyverse)
+library(here)
+statsurvey_df <- read_csv(here("data/stat113_survey.csv"))
+```
+
+```{r}
+statsurvey_df <- statsurvey_df |> 
+  mutate(time_year = as.numeric(time_year)) |> 
+  mutate(academic_year = if_else(time_semester == 's', true = time_year - 1, false = time_year )) |>
+  filter(GPA <= 4) |>
+  filter(!is.na(GPA))
+
+gpa_info <- statsurvey_df |> 
+  group_by(academic_year) |> 
+  summarise(avg = mean(GPA), total = n(), stdev = sd(GPA)) |>
+  mutate(se = stdev / sqrt(total), 
+         lb_se = avg - se,
+         ub_se = avg + se)
+
+
+
+ggplot(data = gpa_info, aes(x = academic_year, y = avg)) +
+  geom_errorbar(aes( ymin = lb_se, ymax = ub_se), width = .5, color = "#E42B1C") +
+    geom_point()
+
+tatoo_info <- statsurvey_df |> filter(academic_year > 12) |> 
+  filter(!is.na(Tattoo)) |> 
+  mutate(has_tat = if_else(Tattoo == "Yes", true = 1, false = 0)) |>
+  group_by(academic_year) |> 
+  summarise(total = n(), 
+            prop = mean(has_tat)) |>
+  mutate(se = sqrt(prop*(1-prop)/total),
+         ub_se = prop + se,
+         lb_se = prop - se)
+tatoo_info$academic_year <- factor(tatoo_info$academic_year)
+
+ggplot(data = tatoo_info, aes(x = academic_year, y = prop)) +
+  geom_errorbar(aes( ymin = lb_se, ymax = ub_se), width = .5, color = "#E42B1C") +
+    geom_point()
+```
+
+

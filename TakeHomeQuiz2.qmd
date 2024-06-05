@@ -1,0 +1,82 @@
+---
+title: "TakeHomeQuiz2"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+Statement of Integrity: “All work presented is my own, and I have followed all rules for collaboration. If I used any AI on this assignment, I have clearly stated both (1) what my search prompt was and (2) what I used from the AI answer.””
+Jax Lubkowitz
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+df <- read_excel(here::here("data/slu_graduates_17_23.xlsx"))
+
+## fixes error in the data
+df <- df |> mutate(across(everything(),
+                          .fns = ~replace(., . ==  "STATS" , "STAT")))
+```
+
+# Question 1
+```{r}
+stat_other_maj <- df |> filter(major1 == "STAT" | major2 == "STAT" | major3 == "STAT") |>
+  select(-graduation_year, -sex, -minor1, -minor2, -minor3) |>
+  pivot_longer(starts_with("major"), names_to = "major_num", values_to = "major") |>
+  na.omit(major) |>
+  filter(major != "STAT") |>
+  group_by(major) |>
+  summarise(total = n()) |>
+  mutate(major = fct_reorder(major, total))
+
+ggplot(data = stat_other_maj, aes(x = major, y = total)) +
+  geom_segment(aes(xend = major, y = 0, yend = total)) +
+  geom_point() +
+  coord_flip() +
+  labs(title = "Most popular Co-Major's among Stat Majors")
+```
+
+# Question 2
+```{r}
+graph <- df |>
+  select(-starts_with("minor")) |>
+  pivot_longer(starts_with("major"), names_to = "major_num", values_to = "major") |>
+  na.omit(major) |>
+  group_by(major, sex) |>
+  summarise(n_majors = n()) |>
+  ungroup() |>
+  pivot_wider(names_from = sex, values_from = n_majors, values_fill = 0) |>
+  mutate(prop = `F` /(`F`+ M),
+         se = sqrt(prop*(1-prop)/(`F`+ M)),
+         ub_se = prop + se,
+         lb_se = prop - se) |>
+  filter(`F` + M >= 70) |>
+  mutate(major = fct_reorder(major, prop)) |>
+  mutate(MSTCS = if_else(major == "MATH" | major == "STAT" | major == "CS", TRUE, FALSE))
+
+
+ggplot(data = graph, aes(x = major, y = prop, color = MSTCS)) +
+    geom_errorbar(aes( ymin = lb_se, ymax = ub_se), width = .5) +
+    geom_point() +
+    coord_flip() +
+    labs(y = "Proportion of Major Female", caption = "Data Source: SLU Institutional Resource Office")
+```
+
+# Question 3
+```{r}
+alcohol_df <- read_csv(here("data/alcohol.csv"))
+world_mp <- map_data("world") 
+
+alc_map <- left_join(world_mp, alcohol_df, by = join_by(region == country))
+
+alc_map$beer_servings
+
+ggplot(data = alc_map, mapping = aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = beer_servings)) +
+  coord_map(projection = "mercator", xlim = c(-180,180)) +
+  scale_fill_viridis_b(option = "plasma") +
+  theme_minimal()
+```
+

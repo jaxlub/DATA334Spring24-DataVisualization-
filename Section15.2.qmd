@@ -1,0 +1,233 @@
+---
+title: "Section15.2"
+author: "Jax Lubkowitz"
+format: html
+editor: visual
+---
+```{r}
+library(tidyverse)
+
+theme_set(theme_minimal())
+
+atp_df <- read_csv("https://raw.githubusercontent.com/JeffSackmann/tennis_atp/master/atp_matches_2023.csv") |>
+  mutate(tour = "atp")
+wta_df <- read_csv("https://raw.githubusercontent.com/JeffSackmann/tennis_wta/master/wta_matches_2023.csv") |>
+  mutate(tour = "wta")
+
+both_df <- bind_rows(atp_df, wta_df)
+
+both_long <- both_df |> pivot_longer(c(winner_name, loser_name))
+
+## only keep players who have player over 50 matches
+both_n50 <- both_long |> group_by(value) |> summarise(n = n()) |>
+  filter(n > 50)
+
+## construct various statistics
+major_tennis <- semi_join(both_long, both_n50, by = c("value"))
+major_tennis <- major_tennis |> mutate(w_svperc = 100 * w_1stIn / w_svpt,
+                        l_svperc = 100 * l_1stIn / l_svpt,
+                        w_firstwon = 100 * w_1stWon / w_1stIn,
+                        l_firstwon = 100 * l_1stWon / l_1stIn,
+                        w_secondwon = 100 * w_2ndWon / (w_svpt - w_1stIn),
+                        l_secondwon = 100 * l_2ndWon / (l_svpt - l_1stIn))
+
+major_tennis_w <- major_tennis |> filter(name == "winner_name")
+major_tennis_l <- major_tennis |> filter(name == "loser_name")
+
+w_small <- major_tennis_w |> select(value, winner_seed, w_ace, w_df,
+                                    w_svperc, w_firstwon, w_secondwon, tour) |>
+  rename(seed = winner_seed, ace = w_ace, df = w_df, svperc = w_svperc,
+         firstwon = w_firstwon, secondwon = w_secondwon)
+
+l_small <- major_tennis_l |> select(value, loser_seed, l_ace, l_df,
+                                    l_svperc, l_firstwon, l_secondwon, tour) |>
+  rename(seed = loser_seed, ace = l_ace, df = l_df, svperc = l_svperc,
+         firstwon = l_firstwon, secondwon = l_secondwon)
+
+df <- bind_rows(w_small, l_small) |>
+  rename(player = "value")
+
+
+ggplot(data = df, aes(x = ace)) +
+  geom_histogram()
+```
+
+
+```{r}
+library(shiny)
+
+players <- df |> 
+  mutate(player = factor(player)) |> 
+  pull(player) |> 
+  levels()
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      radioButtons("tour_sel", "Select League", choices = df$tour |> unique()),
+      selectInput("player", 
+                  label = "Select Player of Interest", 
+                  choices = NULL),
+      selectInput("stat", 
+                  label = "Select a Statistic of Interest", 
+                  choices = c("seed", "ace", "df", "svperc","firstwon","secondwon")),
+      sliderInput("bins", "# Bins in Histogram", min = 1, max = 20, value = 5)),
+  
+  mainPanel(
+    plotOutput("major_plot"),
+    dataTableOutput("player_table"))
+))
+
+server <- function(input, output, session) {
+  
+  # can be input or reactive df - when something in first arg changes, second chunk updates
+  observeEvent(input$tour_sel,{
+    players_choices <- df |> 
+      filter(tour == input$tour_sel) |>
+      mutate(player = factor(player)) |> 
+      pull(player) |> 
+      levels()
+    updateSelectInput(inputId = "player", choices = players_choices)
+  })
+  
+  data_set <- reactive({data <- df |> filter(player == input$player)})
+  
+  output$player_table <- renderDataTable({
+    data_set()
+  })
+    
+  output$major_plot <- renderPlot({
+    ggplot(data = data_set(), aes(x = .data[[input$stat]])) +
+      geom_histogram(bins = input$bins) +
+      labs(title = glue::glue("Stats for", input$player))
+  })
+}
+
+shinyApp(ui, server)
+```
+
+# Class Prep
+# 3.3.6.1
+```{r}
+ui <- fluidPage(
+  textInput("name", "What's your name?"),
+  textOutput("greeting")
+)
+
+server1 <- function(input, output, server) {
+  output$greeting <- renderText(paste0("Hello ", input$name))
+}
+
+server2 <- function(input, output, server) {
+  greeting <- reactive({paste0("Hello ", input$name)})
+  output$greeting <- renderText(greeting())
+}
+
+
+server3 <- function(input, output, server) {
+  output$greeting <- reactive({paste0("Hello ", input$name)})
+}
+
+shinyApp(ui, server2)
+```
+
+# 3.3.6.2
+See drawing
+
+
+# Another example
+```{r}
+library(gapminder)
+continents <- unique(gapminder$continent) |>
+  fct_expand("All") |> levels()
+
+ui <- fluidPage(
+  selectInput("continent", "Continent", choices = continents), 
+  selectInput("country", "Country", choices = NULL),
+  tableOutput("data")
+)
+
+server <- function(input,output,session){
+  
+  observeEvent(input$continent,{
+    
+    if(input$continent == "All"){
+      continent_only <- gapminder |>
+        mutate(country = factor(country)) |> 
+        pull(country) |> 
+        levels()
+    } else {
+      continent_only <- gapminder |> 
+        filter(continent == input$continent) |>
+        mutate(country = factor(country)) |> 
+        pull(country) |> 
+        levels()
+    }
+    updateSelectInput(inputId = "country", choices = continent_only)
+  })
+  
+  output$data <- renderTable({
+    gapminder |> filter(country == input$country)
+  }) 
+}
+
+shinyApp(ui, server)
+
+```
+
+# Action Button Example
+```{r}
+poke_df <- read_csv(here::here("data/pokemon_full.csv"))
+poke_long <- poke_df |> pivot_longer(4:9, values_to = "value", 
+                                      names_to = "stat")
+
+poke_small <- poke_long |>
+  filter(Name == "Bulbasaur" | Name == "Ivysaur")
+ggplot(data = poke_small, aes(x = stat, y = value)) +
+  geom_col(aes(fill = Name), position = "dodge") +
+  scale_fill_viridis_d()
+```
+
+```{r}
+
+library(shiny)
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      selectizeInput("pokechoose1", label = "Choose Pokemon",
+                     choices = poke_df$Name, selected = "Bulbasaur",
+                     multiple = TRUE),
+      actionButton("run_app", label = "Graph Selected")
+      ),
+    mainPanel(
+      plotOutput(outputId = "pokegraph")
+    )
+  )
+)
+
+# event reactice vs observe event
+  # observe event is never assigned to anything
+
+server <- function(input, output, session) {
+  
+  poke_react <- eventReactive(input$run_app, {
+    poke_long |> filter(Name %in% input$pokechoose1) 
+  })
+  
+  output$pokegraph <- renderPlot({
+    
+    ggplot(data = poke_react(),
+           aes(x = value, y = stat)) +
+      geom_col(aes(fill = Name),
+               position = position_dodge2(reverse = TRUE)) +
+      scale_fill_viridis_d() +
+      theme_minimal(base_size = 34)
+    
+  })
+  
+}
+
+shinyApp(ui, server)
+```
+

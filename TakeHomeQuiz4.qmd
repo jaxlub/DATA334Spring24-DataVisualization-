@@ -1,0 +1,82 @@
+---
+title: "TakeHomeQuiz4"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+**Statement of Integrity**: "All work presented is my own, and I have followed all rules for collaboration. If I used any AI on this assignment, I have clearly stated both (1) what my search prompt was and (2) what I used from the AI answer.""
+
+Jax Lubkowitz
+
+```{r}
+library(tidyverse)
+library(broom)
+heart_df <- read_csv(here::here("data/heart.csv")) |>
+  mutate(target = case_when(target == 1 ~ 0,
+                            target == 0 ~ 1)) ## flip coding of response
+heart_df$sex <- as.character(heart_df$sex) # converted sex to char of 1 and 0 for ease of use of catagorical variable
+```
+
+# Question 1
+
+```{r}
+heart.lm <- glm(target ~ age + sex + chol, data = heart_df, family = "binomial")
+heart.lm |> glance()
+heart.lm |> tidy()
+```
+
+For every increase in age by 1 year, with sex and chol held constant, we predict a multiplicative increase of odds of heart disease to increase by 0.0629.
+
+# Question 2
+
+```{r}
+heart_int.lm <- glm(target ~ age + sex + chol+ age:sex + age:chol, data = heart_df, family = "binomial")
+heart_int.lm |> tidy()
+heart_int.lm |> glance()
+```
+
+Interaction model has higher BIC so is a worse model then the model without interaction terms (400 vs 390 respectively).
+
+# Question 3
+
+NA
+
+# Question 4
+
+```{r}
+library(modelr)
+
+grid <- heart_df |>
+  data_grid(
+    age = seq_range(age, n = 10),
+    sex = c("1","0"),
+    chol = seq_range(chol, n = 10),
+  ) 
+
+aug_surv <- augment(heart.lm, newdata = grid,
+                    se_fit = TRUE)
+
+# Convert log odds to prob
+aug_surv <- aug_surv |> mutate(pred_prob = exp(.fitted)/(1+exp(.fitted)))
+
+ggplot(data = aug_surv, aes(x = age, y = pred_prob, group = chol, color = chol)) +
+  geom_line() +
+  facet_grid(~ sex) +
+  scale_color_binned(type = "gradient")
+```
+
+0 = female 1 = male
+
+# Question 5
+
+Heart disease is associated with many factors such as lifestyle, diet, genetic factors and weight. All of these would be excellent things to know about our population. In addition this data was collected clinic. The sampling of a clinic while convenient might have major implications for introducing bias in our sample. For example if this was a clinic for heart disease testing the people coming in to get tested are definitely not random and are probably people who think they have heart disease and thus majorly skews our data and thus our model. A random sample of the entire population, while much harder to acquire, would be a much better data set to build this model on.
+
+Lifestyle, genetic factors, weight
+
+What was the clinic for? if this data comes from a clinic of people came in to get tested for heart disease they probably skews our data - def not a random sample
+
+# Question 6
+
+We cannot see individual changes in paired box plots and in doing so some information is lost. In cases like this we want to see which individuals and how many of them had decrease in blockage and by how much and on the other hand maybe some even increased. In side by side box plots the population trend can be seen but not the individual points which is of interest in this case. Side-by-side box plots might show a population impact of this treatment but in looking at individuals change we might see trends such as for half of the test-subjects the treatment made it so much better but for others made it so much worse.

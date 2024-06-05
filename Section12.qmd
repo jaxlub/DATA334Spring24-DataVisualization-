@@ -1,0 +1,64 @@
+---
+title: "Section12 - Visualization Ethics"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+# Exercise 1
+In the "stand your ground" visual it shows, at first glance, a major decrease in murders committed in violent crimes as soon as the stand your ground law was passed. Upon closer inspection the y axis has been flipped and this is actual a massive spike in murders. This is extremely unethical as it portrays a law as helping society when in reality it increased murders by a lot. This visual came out a couple months after an innocent person was killed while walking home and the killer was acquitted on this law as he thought the person was suspicious. 
+
+# Exercise 2
+
+3. Build teams with diverse ideas, backgrounds, and strengths.
+
+  This is extremely important for working in data science. If a team is working on a project and all are like minded they can often overlook important features and even introduce bias unintentionally. This can lead to misleading, harmful and wrong visuals and thus this principle is very important. 
+
+11. Protect the privacy and security of individuals represented in our data.
+
+  It is important to protect the identity of people within data sets. In some cases looking at the data can be used to ID individuals even if their names are not present in the dataset. This can expose private aspects of their lives and also put them in harms way. One such example is a dataset of a stat113 class and only 1 student is left handed. Even if the students name in the dataset is unknown, their responses to the rest of the questions could still be seen. 
+  
+# Exercise 3
+The visual with each case depicted as a dot humanizes the data more so then using a color gradiant. In addition to showing more precise locations and distributions each represents a persons deaths and in doing so shows the mass scale of murder where as using the color scale gradiant by region in the other graphic takes away the severity of how many people actually lost their lives.
+
+# Exercise 4
+One way to humanize a visual such as this could be to color the points by age and shape of points by gender. This would allow each point to be seen as an individual person and could see who they were. In this example the visual might have too much overlap but in others labeling points with names is also a strong way to humanize visuals to shift away from "these are just data points" to "these were real people who suffered and died." 
+
+
+
+# Exercise 5
+Three major takeaways - 
+The idea that visuals can be perfectly ethical is a little naive and the goal is to maximize understanding of ways that visuals can mislead while minimizing the harm the visual does. In doing so we can educate people on how to view and make visuals in ethical ways.
+
+In this model TayTweet developers were ignorant or overlooked biases and racism on the internet and were foolish to think that a model modeling a human could be neutral when humans are so non-neutral and are extremely biased themselves. 
+
+When building a visual people need to look beyond "is this a good way to convey information?" and ask themselves "is making this visual going to harm people?" At the end of the day building a good visual is not a good visual if it harms individuals or groups of people. This needs to be taken into account.  
+
+# Exercise 6
+This visual uses emotion to emphasize this data much stronger then a statement. A statement is much more neutral and un-humanized. I heard a quote once along the lines of "a single death is a tragedy but a million is a statistic" and this is exactly what this uses. In a short statement this is just a statistic but the visual shows each and every person and how much they lost, showing every one as a tragedy. By showing every individual data point and age, the data is much more humanized. On top of this the total years of human life lost is calculated to convey just how tragic this is almost 500k years, driving home their message - this is a major problem. 
+
+
+
+# Challenger Case Study
+
+```{r}
+library(tidyverse)
+library(here)
+theme_set(theme_minimal())
+challenger_df <- read_csv(here("data/Challenger.csv"))
+```
+
+```{r}
+challenger.lm <- glm(SuccessfulLaunch ~ Temperature, data = challenger_df, family = "binomial")
+```
+log-odds of succesfil luanmch are .2322
+
+```{r}
+ggplot(data = challenger_df, aes(x = Temperature, y = SuccessfulLaunch)) +
+  geom_jitter(height = 0) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  theme_minimal() +
+  geom_line(aes(x=31))
+```
+No tests near this temperature but all colder launches (ie sub 60 F) have failed. We encourage further testing at this temperatures before attempting to launch the rocket. 

@@ -1,0 +1,117 @@
+---
+title: "Section10"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+```{r}
+library(tidyverse)
+library(here)
+library(broom)
+theme_set(theme_minimal())
+
+titanic_df <- read_csv(here("data/titanic.csv"),
+                       col_types = list(Pclass = col_factor())) |>
+  mutate(Pclass = fct_recode(Pclass,
+                             "1st" = "1",
+                             "2nd" = "2",
+                             "3rd" = "3"))
+```
+
+```{r}
+titanic_mod <- glm(Survived ~ Age,
+                   data = titanic_df, family = "binomial")
+
+survived <- titanic_df |> filter(Survived == 1)
+dead <- titanic_df |> filter(Survived == 0)
+
+titanic_mod |> tidy()
+
+ggplot(data = titanic_df, aes(x = Age, y = Survived)) +
+  geom_rug(data = survived, sides = "t") +
+  geom_rug(data = dead, sides = "b")+
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  theme_minimal()
+```
+
+The model predicts that a one year increase in age is associated with a 0.00261 decrease in the log-odds of survival.
+
+The model predicts that a one year increase in age is associated with a multiplicative change in the odds of survival of 0.997 times
+
+# Exercise 1
+```{r}
+fare_mod <- glm(Survived ~ Fare, data = titanic_df, family = "binomial")
+fare_mod |> tidy()
+
+ggplot(data = titanic_df, aes(x = Fare, y = Survived)) +
+  geom_jitter(height = 0.05) +
+  geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+  theme_minimal()
+```
+
+
+
+
+# Exercise 2
+```{r}
+sex_mod <- glm(Survived ~ Sex, data = titanic_df, family = "binomial")
+sex_mod |> tidy()
+```
+The model predicts that males are associated with a -2.51 decrease in the log-odds of survival compared to females.
+
+
+```{r}
+titanic_large <- glm(Survived ~ Age + Sex + Pclass, data = titanic_df,
+                     family = "binomial")
+titanic_large |> tidy()
+library(modelr)
+grid <- titanic_df |>
+  data_grid(
+    Age = seq_range(Age, n = 10),
+    Sex = c("female", "male"),
+    Pclass = c("1st", "2nd", "3rd")
+  ) 
+
+
+# .fitted has predicted log odds which range from -inf to +inf
+aug_surv <- augment(titanic_large, newdata = grid,
+                    se_fit = TRUE)
+
+ggplot(data = aug_surv, aes(x = Age, y = .fitted, color = Sex)) +
+  geom_line() +
+  facet_wrap(~ Pclass)
+
+# Convert log odds to prob
+aug_surv <- aug_surv |> mutate(pred_prob = exp(.fitted)/(1+exp(.fitted)))
+
+
+ggplot(data = aug_surv, aes(x = ge, y = pred_prob, color = Sex)) +
+  geom_line() +
+  facet_wrap(~ Pclass)
+
+```
+
+# Adding interaction 
+```{r}
+titanic_int <- glm(Survived ~ Age + Sex + Pclass + Sex:Pclass, data = titanic_df,
+                     family = "binomial")
+aug_surv_int <- augment(titanic_int, newdata = grid,
+                    se_fit = TRUE)
+aug_surv_int <- aug_surv_int |> mutate(pred_prob = exp(.fitted)/(1+exp(.fitted)))
+
+plot_df <- bind_rows(lst(aug_surv, aug_surv_int), .id = "model")
+
+ggplot(data = plot_df, aes(x = Age, y = pred_prob)) +
+  geom_line(aes(color = model)) +
+  facet_grid(~ Pclass + Sex) +
+  geom_rug(data = survived, sides = "t", aes(y =Survived)) +
+  geom_rug(data = dead, sides = "b", aes(y = Survived ))
+  
+
+titanic_int |> glance()
+
+titanic_large |> glance()
+```
+Interaction has better BIC and AIC (lower) so is better model. 

@@ -1,0 +1,62 @@
+---
+title: "Quiz3"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+Statement of Integrity: “All work presented is my own, and I have followed all rules for collaboration. I have not used any AI for this assignment.”
+
+Jax Lubkowitz
+
+# Question 1
+```{r}
+library(tidyverse)
+library(broom)
+library(modelr)
+lego_df <- read_csv(here::here("data/lego_sample.csv")) |> 
+  mutate(age_5 = if_else(ages %in% c("Ages_6-12", "Ages_6+",
+                                     "Ages_7+", "Ages_8+"),
+                                  true = "no", false = "yes"))
+lego.lm <- lm(price ~ pieces + theme + age_5 + pieces:theme, data = lego_df)
+
+grid <- lego_df |>
+  data_grid(
+    pieces = seq_range(pieces, n = 15),
+    age_5 = c("yes", "no"),
+    theme = c("DUPLO®", "Friends", "City")
+  ) 
+
+aug_surv <- augment(lego.lm, newdata = grid,
+                    se_fit = TRUE, interval = "confidence")
+
+ggplot(data = lego_df, aes(x = pieces, y = price, fill = theme)) +
+  geom_point(aes(color = theme)) +
+  geom_ribbon(data = aug_surv, aes(y = .fitted,
+                                  ymin = .lower,
+                                  ymax = .upper), alpha = .4) +
+  geom_line(data = aug_surv, aes(x = pieces, y = .fitted, color = theme), linewidth = 1.2) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  facet_grid(~ age_5) +
+  theme_minimal()
+```
+
+# Question 2
+```{r}
+lego.lm |> tidy()
+```
+
+# Question 3
+```{r}
+lego.lm |> glance()
+```
+
+# Question 4
+```{r}
+Q4_df <- lego.lm |> augment() |> select(price, pieces, theme, age_5, .resid, .fitted)
+ggplot(data = Q4_df, aes(x = .fitted, y = .resid)) +
+  geom_point()
+```
+

@@ -1,0 +1,183 @@
+---
+title: "Section14"
+author: "Jax Lubkowitz"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(readxl)
+theme_set(theme_minimal())
+
+df <- read_excel("data/slu_graduates_17_23.xlsx")
+
+## fixes error in the data
+df <- df |> mutate(across(everything(),
+                          .fns = ~replace(., . ==  "STATS" , "STAT")))
+
+df_long <- df |> pivot_longer(4:9, names_to = "type",
+                              values_to = "discipline")
+
+df_major <- df_long |>
+  filter(type == "major1" | type == "major2" | type == "major3")
+
+df_major |> filter(discipline == "STAT") |> group_by(sex)|> summarise(n_student = n())
+
+
+df_stat <- df_major |> filter(discipline == "STAT") 
+
+df_statfull <- semi_join(df_long, df_stat, by = "adm_id") |>
+  filter(type == "major1" |
+           type == "major2" | 
+           type == "major3")
+
+df_nostat <- df_statfull |> filter(discipline != "STAT" &
+                                     !is.na(discipline)) |>
+  group_by(discipline) |>
+  summarise(nstudent = n()) |>
+  filter(nstudent >=10) |>
+  mutate(discipline = fct_reorder(discipline, nstudent))
+
+ggplot(data = df_nostat, aes(x = discipline, y = nstudent)) +
+  geom_segment(aes(y = 0, yend = nstudent, xend = discipline),
+               colour = "brown") +
+  geom_point(colour = "darkred") + 
+  coord_flip() +
+  theme_minimal()
+```
+
+```{r}
+library(shiny)
+
+majors <- df_major |> 
+  mutate(discipline = factor(discipline)) |> 
+  pull(discipline) |> 
+  levels()
+
+ui <- fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("major_choice",label = "Choose a Major:", choices = majors),
+      sliderInput("n_majors", 
+                  label = "Minimum Number of Majors:", 
+                  value = 1, step = 1, 
+                  min = 1, max = 15),
+      radioButtons("maj_min",
+                   "Select Majors or Minors",
+                   c("major", "minor"))
+    ),
+    mainPanel(
+      plotOutput("major_plot"),
+      tableOutput("major_table")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  major_final <- reactive ({
+    # reactive if doing data minipulation but can put input directly into other functions like below
+    major_react <- df_major |> filter(discipline == input$major_choice)
+    
+    df_full <- semi_join(df_long, major_react, by = "adm_id") |>
+      filter(str_detect(type, pattern = input$maj_min) == TRUE)
+    
+    df_noself <- df_full |> 
+      filter(discipline != input$major_choice & !is.na(discipline)) |>
+      group_by(discipline) |>
+      summarise(nstudent = n()) |>
+      mutate(discipline = fct_reorder(discipline, nstudent))
+    df <- df_noself |> filter(nstudent >= input$n_majors)
+    
+    df
+  })
+  
+  output$major_plot <- renderPlot({
+    ggplot(data = major_final(), aes(x = discipline, y = nstudent)) +
+      geom_segment(aes(y = 0, yend = nstudent, xend = discipline),
+                   colour = "brown") +
+      geom_point(colour = "darkred") + 
+      coord_flip() +
+      theme_minimal(base_size = 14)
+  })
+  
+  
+  
+  output$major_table <- renderTable({
+    df_major |> 
+      filter(discipline == input$major_choice) |> 
+      group_by(sex) |>
+      summarise(n_student = n())
+  })
+}
+
+shinyApp(ui, server)
+```
+
+# Functions
+
+functions can get goofy when they take data set variables as parameters.
+
+# Exercise 1 - NHL Draft Pick Trajectory Plots
+
+In this shiny app you can change the number of draft picks, years to include of draft picks, number of seasons into career and number of draft pick avg using sliders. You can also use two drop down menus to select various Y axis variables and select players position. The user can then click plot to trigger the graph of the data they selected. Upon clicking plot the shiny app plots with draft pick number on the x-axis, user selected y-axis with bars of counts colored by years into career. Using this shiny app I looked at the first 5 years of draft picks careers of all picks and found that the top 30 draft picks get lots of playtime with lower picks having much more then higher. After draft pick 30 to 300 it is pretty constant amount of playtime though very low.
+
+# Exercise 2 - Clash Synergy Network
+
+In this shiny app we can see a massive network of every card in Clash Royal. The network depicts how often cards are used together. When the user puts the mouse on a card it highlights its connections. Furthermore the user can select different tabs to look at the full graph network, a ego network, heatmap or clustergram. The output of this shiny app are pretty straight forward being a network graph that highlights where the user map is, a similar network of card egos, a static heatmpa and static clustergram.
+
+# Exercise 3.2-3
+
+In the server x needs to be specified as input\$x and not just x so that it is "connected" to the sliderInput x that the user can change. Furthermore I added the additional slider from exercise 3.
+
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+  sliderInput("x", label = "If x is", min = 1, max = 50, value = 30),
+  "then x times 5 is",
+  sliderInput("y", label = "If y is", min = 1, max = 50, value = 30),
+  "then y times x is",
+  textOutput("product")
+)
+
+server <- function(input, output, session) {
+  output$product <- renderText({ 
+    input$x * input$y
+  })
+}
+
+shinyApp(ui, server)
+```
+
+# Exercise 3.4
+
+There is the same product equation in each output so I made the product calculation into a reactive that each output uses.
+
+```{r}
+library(shiny)
+
+ui <- fluidPage(
+  sliderInput("x", "If x is", min = 1, max = 50, value = 30),
+  sliderInput("y", "and y is", min = 1, max = 50, value = 5),
+  "then, (x * y) is", textOutput("product"),
+  "and, (x * y) + 5 is", textOutput("product_plus5"),
+  "and (x * y) + 10 is", textOutput("product_plus10")
+)
+
+server <- function(input, output, session) {
+  product <- reactive({ans <- input$x * input$y})
+  
+  output$product <- renderText({ 
+    product()
+  })
+  output$product_plus5 <- renderText({ 
+    product() + 5
+  })
+  output$product_plus10 <- renderText({ 
+    product() + 10
+  })
+}
+
+shinyApp(ui, server)
+```

@@ -1,0 +1,244 @@
+---
+title: "Section9"
+author: "Jax Lubkowitz"
+format: html
+editor: visual
+---
+
+
+```{r}
+library(openintro)
+library(tidyverse)
+theme_set(theme_minimal())
+evals <- openintro::evals
+```
+
+Steps - 
+fit the model of interest with lm().
+
+construct a grid of predictor values with the data_grid() function from the modelr package.
+
+Use the augment() function from the broom package on the data grid in (2) to predict the response variable according to the model for each row in the grid.
+
+Use ggplot2 to construct a meaningful plot with the model predictions from (3).
+
+```{r}
+ggplot(data = evals, aes(x = age, y = score)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+Fit model
+```{r}
+library(broom)
+mod_age <- lm(score ~ age, data = evals) 
+mod_age |> tidy()
+```
+
+Create grid
+```{r}
+library(modelr)
+grid <- evals |>
+  data_grid(
+    age = seq_range(age, n = 6)
+  ) 
+grid
+```
+
+```{r}
+aug_age <- augment(mod_age, newdata = grid,
+                   interval = "confidence")
+aug_age
+```
+
+```{r}
+ggplot(data = evals, aes(x = age, y = score)) +
+  geom_point() +
+  geom_line(data = aug_age, aes(x = age, y = .fitted),
+            colour = "blue", linewidth = 1.2)
+```
+
+```{r}
+ggplot(data = evals, aes(x = age, y = score)) +
+  geom_point() +
+  geom_line(data = aug_age, aes(x = age, y = .fitted),
+            colour = "blue", linewidth = 1.2) +
+  geom_ribbon(data = aug_age, aes(y = .fitted,
+                                  ymin = .lower,
+                                  ymax = .upper), 
+              alpha = 0.4)
+```
+
+# Exercise 1
+A confidence interval is the range in which we can say we are 95% confident the true value is for a(n) certain predictor. While the predictor interval we can say we are 95% confident that the value given a(n) predictor will be in this range. A CI looks at the mean or true value in our data while a PI tries to use our model to guage a new data point but both are 95% confident. 
+
+# Exercise 2
+```{r}
+aug_age2.0 <- augment(mod_age, newdata = grid,
+                   interval = "prediction")
+ggplot(data = evals, aes(x = age, y = score)) +
+  geom_point() +
+  geom_line(data = aug_age2.0, aes(x = age, y = .fitted),
+            colour = "blue", linewidth = 1.2) +
+  geom_ribbon(data = aug_age, aes(y = .fitted,
+                                  ymin = .lower,
+                                  ymax = .upper), 
+              alpha = 0.4)
+```
+
+# Exercise 3
+Both the aug_age .fitted and manual calculation are the same.
+```{r}
+4.46+(-0.00593*(29))
+aug_age
+```
+
+# Exercise 4
+```{r}
+grid <- evals |>
+  data_grid(
+    age = seq_range(age, n = 2)
+  )
+aug_age <- augment(mod_age, newdata = grid,
+                   interval = "confidence")
+ggplot(data = evals, aes(x = age, y = score)) +
+  geom_point() +
+  geom_line(data = aug_age, aes(x = age, y = .fitted),
+            colour = "blue", linewidth = 1.2) +
+  geom_ribbon(data = aug_age, aes(y = .fitted,
+                                  ymin = .lower,
+                                  ymax = .upper), 
+              alpha = 0.4)
+```
+Seq_range creates a sequence of n lenght from a range and thus the range does not change when we have a sequence of 2 or a sequence of 100 (aka changing n). Either way our x-axis still goes from 29 to 73 and thus is not that much of a difference for our x-axis and thus not a huge visual change in our plot.
+
+
+# Exercise 5
+```{r}
+aug_age <- augment(mod_age, newdata = grid,
+                   interval = "confidence")
+
+mod_agesq <- lm(score ~ age + I(age ^ 2), data = evals) 
+
+grid <- evals |>
+  data_grid(
+    age = seq_range(age, n = 6)
+  ) 
+
+aug_agesq <- augment(mod_agesq, newdata = grid,
+                     interval = "confidence")
+
+plot_df <- bind_rows(lst(aug_age, aug_agesq), .id = "model")
+plot_df
+
+ggplot(data = evals, aes(x = age, y = score)) +
+  geom_point() +
+  geom_line(data = plot_df, aes(x = age, y = .fitted, color = model), linewidth = 1.2) +
+  geom_ribbon(data = aug_age, aes(y = .fitted,
+                                  ymin = .lower,
+                                  ymax = .upper), alpha = .4) +
+  geom_ribbon(data = aug_agesq, aes(y = .fitted,
+                                  ymin = .lower,
+                                  ymax = .upper), alpha = .4)
+```
+
+
+```{r}
+mod_comp <- lm(score ~ age + bty_avg + age:bty_avg + gender,
+               data = evals)
+mod_comp |> tidy()
+```
+
+```{r}
+grid <- evals |>
+  data_grid(
+    age = seq_range(age, n = 6),
+    bty_avg = seq_range(bty_avg, n = 6),
+    gender = c("female", "male")
+  ) 
+grid
+
+#     bty_avg = seq_range(bty_avg, n = 6, trim = .1),
+
+aug_int <- augment(mod_comp, newdata = grid,
+                   interval = "confidence") # Use model to predict for each row 
+aug_int
+
+
+ggplot(data = aug_int, aes(x = age, y = .fitted)) +
+  geom_line(aes(color = as.factor(bty_avg)), linewidth = 2) +
+  facet_grid( ~ gender) +
+  geom_ribbon(data = aug_int, aes(y = .fitted, ymin = .lower, ymax = .upper, group = as.factor(bty_avg)), alpha = .2) +
+  geom_line(aes(color = as.factor(bty_avg)), linewidth = 2) +
+  geom_point(data = evals, aes(x = age, y = score), alpha = .2) +
+  theme_minimal() +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d() +
+  labs(color = "beauty average", y = "predicted score")
+
+# Prob best to not have confidence bands - to messy
+
+```
+
+
+
+```{r}
+mod_comp <- lm(score ~ age + gender + age:gender + ethnicity,
+               data = evals)
+mod_comp |> tidy()
+
+grid <- evals |>
+  data_grid(
+    age = seq_range(age, n = 6),
+    ethnicity = c("minority", "not minority"),
+    gender = c("female", "male")
+  ) 
+
+#     bty_avg = seq_range(bty_avg, n = 6, trim = .1),
+aug_int <- augment(mod_comp, newdata = grid,
+                   interval = "confidence") # Use model to predict for each row 
+aug_int
+
+ggplot(data = aug_int, aes(x = age, y = .fitted)) +
+  geom_point(data = evals, aes(x = age, y = score), alpha = .2) +
+  geom_line(aes(color = as.factor(gender))) +
+  geom_ribbon(aes(ymin = .lower, ymax = .upper, group = as.factor(gender)), alpha = .2) +
+  facet_wrap(~ ethnicity) +
+  theme_minimal() +
+  labs(color = "gender", y = "predicted score")
+
+```
+
+```{r}
+mod_comp_2 <- lm(score ~ age + gender + ethnicity,
+               data = evals)
+mod_comp_2 |> tidy()
+
+grid <- evals |>
+  data_grid(
+    age = seq_range(age, n = 6),
+    ethnicity = c("minority", "not minority"),
+    gender = c("female", "male")
+  ) 
+
+#     bty_avg = seq_range(bty_avg, n = 6, trim = .1),
+aug <- augment(mod_comp_2, newdata = grid,
+                   interval = "confidence") # Use model to predict for each row 
+
+
+plot_df <- bind_rows(lst(aug, aug_int), .id = "model")
+
+
+ggplot(data = plot_df, aes(x = age, y = .fitted)) +
+  geom_point(data = evals, aes(x = age, y = score), alpha = .2) +
+  geom_line(aes(color = as.factor(model))) +
+  facet_grid(ethnicity ~ gender) +
+  theme_minimal() +
+  labs(color = "Model", y = "predicted score")
+```
+
+There is no "perfect" solution to look at 1 predictor in model with 9 but one idea is to plug in median values of other predictors and create a grid with different values of variable of interest while rest are held constant. 
+
+
+
+

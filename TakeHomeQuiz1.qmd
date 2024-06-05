@@ -1,0 +1,61 @@
+---
+title: "TakeHomeQuiz1"
+author: "Jax Lubkowitz"
+format: 
+  html:
+    embed-resources: true
+---
+
+**Statement of Integrity**: "All work presented is my own, and I have followed all rules for collaboration. If I used any AI on this assignment, I have clearly stated both (1) what my search prompt was and (2) what I used from the AI answer.""
+
+Jax Lubkowitz
+
+# Question 1
+
+It is easiest to see Group 5's count as they all start on the y axis at 0 while the starting position is not uniform across the rest of the category making it hard to compare them. This can give misconception about groups within each category.
+
+#TODO add vocab
+
+# Question 2
+
+## A.
+
+Diverging - This data could be represented with negative values being one color while positives are the opposite color. Values at 0 could be neutral. This would help emphasize which regions are % change in covid cases is going up or down in each state.
+
+## B.
+
+Sequential - This data could be any percent from 0 to 100 and as it is a range should be colored to show where on the range the state falls: for example, higher percents could be darker red while lower percents could be lighter red.
+
+# Question 3
+
+## A.
+
+A box plot or frequency plot as these convey center, spread, shape and a rough idea of N while other single quantitative graphs are not as strong.
+
+## B.
+
+With this visual you can see the distribution of grades, shape and rough count, none of which can be determined with only the average. With this visual you could color by various factors such as gender or major to show how these factors spread throughout the quiz grades. In addition the visual would be able to show max and min grades across the class which the avg does not represent. The benefit of the visual is its ability to show overall trends in the data that the avg is just not able to capture.
+
+# Question 4
+
+## A.
+
+The geom is changed between these 2 graphs as can be seen by the points in the first to the boxplots in the second.
+
+## B.
+
+The coordinate function was used to cord_flip the x and y axis between these 2 visuals.
+
+## C.
+
+The position was changed for the box plots compared to points in addition the points are jittered in the first and not in the second which is also part of position.
+
+# Question 5
+
+## A.
+
+Plot 1 is better then plot 2 as plot 1 the x-axis starts at 0 while in plot 2 it starts at 40. This can give unrealistic proportional comparisons between them when the x-axis does not start at 0.
+
+## B.
+
+Plot 1 is better then Plot 2 because in plot 2 even with the color there are so many positions that it is hard to discern where one is higher then the next. In plot 1 each's trend is clearly discernible and is easy to compare between.
